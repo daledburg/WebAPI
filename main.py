@@ -4,8 +4,9 @@ from controllers.user_controller import user_bp
 from controllers.cli_controller import db_commands
 from controllers.cash_flow_controller import cash_flow_bp
 from controllers.savings_controller import saving_bp
+from controllers.debt_controller import debt_bp
+from marshmallow.exceptions import ValidationError
 import os
-
 
 def create_app():
     app = Flask(__name__)
@@ -23,7 +24,7 @@ def create_app():
         return {'error': f'The field {err} is required.'}, 400
 
     @app.errorhandler(400)
-    def bad_request(err)
+    def bad_request(err):
         return {'error': str(err)}, 400
 
     @app.errorhandler(ValidationError)
@@ -44,6 +45,7 @@ def create_app():
     app.register_blueprint(db_commands)
     app.register_blueprint(saving_bp)
     app.register_blueprint(cash_flow_bp)
+    app.register_blueprint(debt_bp)
 
     return app
 

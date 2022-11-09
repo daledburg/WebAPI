@@ -1,70 +1,78 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, request
 from datetime import date
 from init import db
-import collections
+from models.debt import Debt, DebtSchema
 from models.cash_flow_items import CashFlowItem, CashFlowItemSchema
-from models.category import CategorySchema, Category
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 cash_flow_bp = Blueprint('cash_flow_items', __name__, url_prefix='/cashflow')
-
-# Function to authorise if item belongs to currently loggen in user
-def authorize(flow_type):
-    users_list = []
-    user = get_jwt_identity()
-    schema_dump = CategorySchema(only=['cash_flow_items']).dump(flow_type)
-    cash_items_dump = schema_dump.get('cash_flow_items')
-    w = 0
-    for i in cash_items_dump:
-        for k, v in i.items():
-            if (k == 'user_id'):
-                if v == int(user):
-                    users_dict = cash_items_dump[w]
-                    users_dict_copy = users_dict.copy()
-                    users_list.append(users_dict_copy)
-                    w = w + 1
-
-    return users_list
-
-# Retrieve all items related to the logged in user
-@cash_flow_bp.route('/')
-@jwt_required()
-def get_all_items():
-    stmt = db.select(Category).filter_by(id=1)
-    incomes = db.session.scalar(stmt)
-    income_list = authorize(incomes)
-
-    stmt1 = db.select(Category).filter_by(id=2)
-    expenses = db.session.scalar(stmt1)
-    expense_list = authorize(expenses)
-
-    return [{'incomes': income_list}, {'expenses': expense_list}]
 
 # Retrieve entered Incomes for User
 @cash_flow_bp.route('/income/')
 @jwt_required()
 def get_incomes():
-    stmt = db.select(Category).filter_by(id=1)
-    incomes = db.session.scalar(stmt)
-    income_list = authorize(incomes)
+    user = get_jwt_identity()
+    stmt = db.session.query(CashFlowItem).where(CashFlowItem.user_id == int(user))
+    income = CashFlowItemSchema(many=True, exclude=['debt']).dump(stmt)
+    user_incomes = [item for item in income if item.get('category_id') == 1]
 
-    return income_list
+    return user_incomes
 
 # Retrieve entered Expenses for User
 @cash_flow_bp.route('/expense/')
 @jwt_required()
 def get_expenses():
-    stmt = db.select(Category).filter_by(id=2)
-    expenses = db.session.scalar(stmt)
-    expense_list = authorize(expenses)
+    user = get_jwt_identity()
+    stmt = db.session.query(CashFlowItem).where(CashFlowItem.user_id == int(user))
+    expense = CashFlowItemSchema(many=True).dump(stmt)
+    user_expenses = [item for item in expense if item.get('category_id') != 1]
 
-    return expense_list
+    return user_expenses
+
+# Retrieve all items related to the logged in user
+@cash_flow_bp.route('/')
+@jwt_required()
+def get_all_items():
+    user_incomes = get_incomes()
+    user_expenses = get_expenses()
+
+    return [{'incomes': user_incomes}, {'expenses': user_expenses}]
+
+# Retrieve only one item connected to user
+@cash_flow_bp.route('/<int:id>/')
+@jwt_required()
+def get_one_cash_flow_item(id):
+    user_id = get_jwt_identity()
+    stmt = db.select(CashFlowItem).filter_by(id=id)
+    one_item = db.session.scalar(stmt)
+    if int(user_id) == int(one_item.user_id):
+        return CashFlowItemSchema().dump(one_item)
+    else:
+        return {'error': 'Item does not exist for user'}
+
+@cash_flow_bp.route('/debts/')
+@jwt_required()
+def get_debts():
+    stmt = db.select(Debt)
+    debts = db.session.scalars(stmt)
+
+    debts_flow_id = DebtSchema(many=True, only=['cash_flow_item_id']).dump(debts)
+    flow_list_ids = [i['cash_flow_item_id'] for i in debts_flow_id]
+    print(flow_list_ids)
+
+    user = get_jwt_identity()
+    stmt = db.session.query(CashFlowItem).where(CashFlowItem.user_id == int(user))
+    expense = CashFlowItemSchema(many=True).dump(stmt)
+    user_debts = []
+    for i in flow_list_ids:
+        user_debts.append([item for item in expense if item.get('id') == i])
+
+    return {"User Debts": user_debts}
 
 # Create new entry in database for new item
 @cash_flow_bp.route('/<int:id>', methods=['POST'])
 @jwt_required()
 def create_item(id):
-
     data = CashFlowItemSchema().load(request.json)
 
     cash_flow_item = CashFlowItem(
@@ -116,29 +124,35 @@ def delete_item(id):
     else:
         return {'error': 'Card not yours!'}, 404
 
+#function to find weeklt amounts
+def find_weekly_amount(items):
+    item_list = []
+
+    for i in items:
+        print(i.get('amount'))
+        if i.get('frequency') == 'Fortnightly':
+            item_list.append(i.get('amount')/2)
+        elif i.get('frequency') == 'Monthly':
+            item_list.append(i.get('amount')/4)
+        elif i.get('frequency') == 'Semi-annually':
+            item_list.append(i.get('amount')/26)
+        elif i.get('frequency') == 'Annually':
+            item_list.append(i.get('amount')/52)
+        elif i.get('frequency') == 'Weekly':
+            item_list.append(i.get('amount'))
+
+    return item_list
+
+# Retrieve budget remainging
 @cash_flow_bp.route('/budget/')
 @jwt_required()
 def get_current_budget():
-    stmt = db.select(Category).filter_by(id=1)
-    incomes = db.session.scalar(stmt)
-    income_list = authorize(incomes)
+    incomes = get_incomes()
+    user_expenses = get_expenses()
 
-    stmt1 = db.select(Category).filter_by(id=2)
-    expenses = db.session.scalar(stmt1)
-    expense_list = authorize(expenses)
+    expense_list = find_weekly_amount(user_expenses)
+    income_list = find_weekly_amount(incomes)
 
-    counter_expense = collections.Counter()
-    for d in expense_list:
-        counter_expense.update(d)
+    budget_amount = sum(income_list) - sum(expense_list)
 
-    result = dict(counter_expense)
-    total_expense = result.get('amount')
-
-    income_counter = collections.Counter()
-    for d in income_list:
-        income_counter.update(d)
-
-    result = dict(income_counter)
-    total_income = result.get('amount')
-
-    return {"budget_remaining": f'Your remaining budget is ${total_income - total_expense}'}
+    return {"budget_remaining": f'Your remaining budget is ${budget_amount}'}
