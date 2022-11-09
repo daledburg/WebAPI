@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey
 from init import db, ma
 from marshmallow.validate import Length, OneOf, And, Regexp
-from marshmallow import fields
+from marshmallow import fields, Schema
 
 VALID_FREQUENCIES = ('Weekly', 'Fortnightly', 'Monthly', 'Semi-annually', 'Annually')
 
@@ -14,18 +14,18 @@ class CashFlowItem(db.Model):
     date_created = db.Column(db.Date)
     frequency = db.Column(db.String, default=VALID_FREQUENCIES[0])
 
-    budget_id = db.Column(db.Integer, db.ForeignKey('budgets.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
 
-    category = db.relationship('Category', back_populates='cash_flow_item')
-    # category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-
+    debt = db.relationship('Debt', back_populates='cash_flow_item')
     user = db.relationship('User', back_populates='cash_flow_item')
-    budget = db.relationship('Budget', back_populates='cash_flow_item')
+    category = db.relationship('Category', back_populates='cash_flow_items')
 
 
 class CashFlowItemSchema(ma.Schema):
     user = fields.Nested('UserSchema', only=['f_name', 'id'])
-    category = fields.List(fields.Nested('CategorySchema'))
+    debt = fields.List(fields.Nested('DebtSchema', only=['outstanding_amount']))
+    
     class Meta:
-        fields = ('id', 'description', 'amount', 'date_created', 'frequency', 'user', 'category')
+        fields = ('id', 'description', 'amount', 'date_created', 'frequency', 'user_id', 'category_id', 'debt')
+        ordered = True

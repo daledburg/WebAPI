@@ -1,18 +1,20 @@
 from init import db, ma
 from marshmallow import fields
 
+# Create Category Model to show incomes or expenses
 class Category(db.Model):
     __tablename__ = 'categories'
 
     id = db.Column(db.Integer, primary_key=True)
     is_income = db.Column(db.Boolean, default=False)
     is_expense = db.Column(db.Boolean, default=False)
-    is_outstanding_debt = db.Column(db.Boolean, default=False)
 
-    cash_flow_item_id = db.Column(db.Integer, db.ForeignKey('cash_flow_items.id'), nullable=False)
+    cash_flow_items = db.relationship('CashFlowItem', back_populates='category', cascade='all, delete')
 
-    cash_flow_item = db.relationship('CashFlowItem', back_populates='category')
-
+# Category schema 
 class CategorySchema(ma.Schema):
+    cash_flow_items = fields.List(fields.Nested('CashFlowItemSchema', only=['description', 'amount', 'frequency', 'user_id', 'debt']))
+    
     class Meta:
-        fields = ('id', 'is_income', 'is_outstanding_debt', 'is_expense')
+        fields = ('id', 'is_income', 'is_expense', 'cash_flow_items')
+        oredered = True

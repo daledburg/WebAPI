@@ -4,6 +4,9 @@ from datetime import date
 from models.user import User
 from models.cash_flow_items import CashFlowItem
 from models.category import Category
+from models.debt import Debt
+from models.saving import Saving
+
 
 db_commands = Blueprint('db', __name__)
 
@@ -19,6 +22,20 @@ def drop_db():
 
 @db_commands.cli.command('seed')
 def seed_db():
+    categories = [
+        Category(
+            is_income = True,
+            is_expense = False
+        ),
+        Category(
+            is_income = False,
+            is_expense = True
+        )
+    ]
+
+    db.session.add_all(categories)
+    db.session.commit()
+
     users = [
         User(
             f_name = 'Dale',
@@ -59,54 +76,117 @@ def seed_db():
             amount = int('1500'),
             date_created = date.today(),
             frequency = 'Weekly',
-            user = users[0]
+            user = users[0],
+            category_id = 1
+        ),
+        CashFlowItem(
+            description = 'Crypto',
+            amount = int('200'),
+            date_created = date.today(),
+            frequency = 'Weekly',
+            user = users[1],
+            category_id = 1
         ),
         CashFlowItem(
             description = 'Rent',
             amount = int('400'),
             date_created = date.today(),
             frequency = 'Fortnightly',
-            user = users[0]
+            user = users[0],
+            category_id = 2
         ),
         CashFlowItem(
             description = 'Electricity',
             amount = int('200'),
             date_created = date.today(),
             frequency = 'Monthly',
-            user = users[0]
+            user = users[0],
+            category_id = 2
         ),
         CashFlowItem(
             description = 'Car Loan',
             amount = int('155'),
             date_created = date.today(),
             frequency = 'Monthly',
-            user = users[0]
-        )
+            user = users[0],
+            category_id = 2
+        ),
+        CashFlowItem(
+            description = 'Wage',
+            amount = int('1200'),
+            date_created = date.today(),
+            frequency = 'Weekly',
+            user = users[1],
+            category_id = 1
+        ),
+        CashFlowItem(
+            description = 'electricity',
+            amount = int('50'),
+            date_created = date.today(),
+            frequency = 'Weekly',
+            user = users[1],
+            category_id = 2
+        ),
+        CashFlowItem(
+            description = 'Home Loan',
+            amount = int('1000'),
+            date_created = date.today(),
+            frequency = 'Monthly',
+            user = users[0],
+            category_id = 2
+        ),
     ]
 
     db.session.add_all(cash_flow_items)
     db.session.commit()
 
-    categories = [
-        Category(
-            is_income = True,
-            cash_flow_item = cash_flow_items[0]
+    outstanding_debts = [
+        Debt(
+            outstanding_amount = float('25000'),
+            cash_flow_item_id = 5
         ),
-        Category(
-            is_expense = True,
-            cash_flow_item = cash_flow_items[1]
-        ),
-        Category(
-            is_income = True,
-            cash_flow_item = cash_flow_items[2]
-        ),
-        Category(
-            is_outstanding_debt = True,
-            is_expense = True,
-            cash_flow_item = cash_flow_items[3]
+        Debt(
+            outstanding_amount = float('300000'),
+            cash_flow_item_id = 8
         )
     ]
 
-    db.session.add_all(categories)
+    db.session.add_all(outstanding_debts)
+    db.session.commit()
+
+    savings = [
+        Saving(
+            bank_name = 'ANZ',
+            current_amount = float('5000'),
+            date_updated = date.today(),
+            user_id = 1
+        ),
+        Saving(
+            bank_name = 'Commbank',
+            current_amount = float('30000'),
+            date_updated = date.today(),
+            user_id = 1
+        ),
+        Saving(
+            bank_name = 'ANZ',
+            current_amount = float('150'),
+            date_updated = date.today(),
+            user_id = 2
+        ),
+        Saving(
+            bank_name = 'Qcountry',
+            current_amount = float('250000'),
+            date_updated = date.today(),
+            user_id = 3
+        ),
+        Saving(
+            bank_name = 'NAB',
+            current_amount = float('7500'),
+            date_updated = date.today(),
+            user_id = 4
+        )
+    ]
+
+    db.session.add_all(savings)
     db.session.commit()
     print('Tables seeded')
