@@ -1,6 +1,8 @@
 from init import db, ma
 from marshmallow import fields
+from marshmallow.validate import Regexp, Range, And
 
+# Create Saving Model 
 class Saving(db.Model):
     __tablename__ = 'savings'
 
@@ -13,8 +15,14 @@ class Saving(db.Model):
 
     user = db.relationship('User', back_populates='saving')
 
+# Create Saving Schema 
 class SavingSchema(ma.Schema):
     user = fields.Nested('UserSchema', only=['f_name', 'id'])
+    # Validate entries for current amount
+    current_amount = fields.Float(required=True, validate=And(
+        Range(min=0.0, error='Amount must be greater than 0'),
+        Regexp('^[0-9]+', error='Only numbers are allowed')))
+        
     class Meta:
         fields = ('id', 'bank_name', 'current_amount', 'date_updated', 'user_id')
         ordered = True

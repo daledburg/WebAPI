@@ -15,6 +15,10 @@ def create_app():
     def not_found(err):
         return {'error': str(err)}, 404
 
+    @app.errorhandler(405)
+    def method_not_allowed(err):
+        return {'error': str(err)}, 405
+
     @app.errorhandler(401)
     def unauthorized(err):
         return {'error': str(err)}, 401
@@ -22,6 +26,10 @@ def create_app():
     @app.errorhandler(KeyError)
     def key_error(err):
         return {'error': f'The field {err} is required.'}, 400
+
+    @app.errorhandler(ValueError)
+    def value_error(err):
+        return {'error': f'The field {err}'}, 400
 
     @app.errorhandler(400)
     def bad_request(err):

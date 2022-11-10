@@ -1,5 +1,6 @@
 from init import db, ma
 from marshmallow import fields
+from marshmallow.validate import Regexp, Range, And
 
 class Debt(db.Model):
     __tablename__ = 'debts'
@@ -13,6 +14,10 @@ class Debt(db.Model):
 
 class DebtSchema(ma.Schema):
     cash_flow_item = fields.List(fields.Nested('CashFlowItemSchema', only=['description']))
+    # Validate outstanding amount for entries through schema
+    outstanding_amount = fields.Float(required=True, validate=And(
+        Range(min=0.0, error='Amount must be greater than 0'),
+        Regexp('^[0-9]+', error='Only numbers are allowed')))
 
     class Meta:
         fields = ('id', 'outstanding_amount', 'final_payment_date', 'cash_flow_item_id')

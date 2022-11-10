@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey
 from init import db, ma
-from marshmallow.validate import Length, OneOf, And, Regexp
-from marshmallow import fields, Schema
+from marshmallow.validate import Length, Range, OneOf, And, Regexp
+from marshmallow import fields
 
 VALID_FREQUENCIES = ('Weekly', 'Fortnightly', 'Monthly', 'Semi-annually', 'Annually')
 
@@ -23,8 +23,15 @@ class CashFlowItem(db.Model):
 
 
 class CashFlowItemSchema(ma.Schema):
+    # Listed views and nested for items when viewing cash flow schema
     user = fields.Nested('UserSchema', only=['f_name', 'id'])
     debt = fields.List(fields.Nested('DebtSchema', only=['outstanding_amount']))
+    # Validate entrie for cash flow items through schema
+    description = fields.String(required=True, validate=Length(min=1))
+    amount = fields.Float(required=True, validate=And(
+        Range(min=0.0, error='Amount must be greater than 0'),
+        Regexp('^[0-9]+', error='Only numbers are allowed')))
+    frequency = fields.String(load_default=VALID_FREQUENCIES[0], validate=OneOf(VALID_FREQUENCIES))
     
     class Meta:
         fields = ('id', 'description', 'amount', 'date_created', 'frequency', 'user_id', 'category_id', 'debt')

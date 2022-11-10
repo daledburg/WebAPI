@@ -14,7 +14,7 @@ class Category(db.Model):
 # Category schema 
 class CategorySchema(ma.Schema):
     cash_flow_items = fields.List(fields.Nested('CashFlowItemSchema', only=['description', 'amount', 'frequency', 'user_id', 'debt']))
-    
+
     class Meta:
         fields = ('id', 'is_income', 'is_expense', 'cash_flow_items')
         oredered = True
