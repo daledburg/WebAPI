@@ -36,7 +36,7 @@ def create_savings():
     return SavingSchema().dump(saving), 201
 
 # Update savings account or delete
-@saving_bp.route('/<int:id>/', methods=['PUT', 'PATCH', 'DELETE'])
+@saving_bp.route('/<int:id>/', methods=['PUT', 'PATCH'])
 @jwt_required()
 def update_savings(id):
     data = SavingSchema().load(request.json)
@@ -48,21 +48,33 @@ def update_savings(id):
 
     # Check if belongs to logged in user
     if int(user_id) == int(saving.user_id):
-        if request.method == ('PUT' or 'PATCH'):
-            if saving:
-                # Update required values in database
-                saving.bank_name = data['bank_name'] or saving.bank_name
-                saving.current_amount = data['current_amount'] or saving.current_amount
-                saving.date_updated = date.today()
-                return SavingSchema(only=['bank_name', 'current_amount', 'date_updated']).dump(saving)
-            else:
-                return {'error': f'Card not found with id {id}'}, 404
-        elif request.method == 'DELETE':
-            if saving:
-                # Delete item from database
-                db.session.delete(saving)
-                db.session.commit()
-                return {'message': 'Account successfully deleted'}
+        if saving:
+            # Update required values in database
+            saving.bank_name = request.json.get('bank_name') or saving.bank_name
+            saving.current_amount = request.json.get('current_amount') or saving.current_amount
+            saving.date_updated = date.today()
+            db.session.commit()
+            return SavingSchema(only=['bank_name', 'current_amount', 'date_updated']).dump(saving)
+        else:
+            return {'error': f'Card not found with id {id}'}, 404
     else:
         return {'error': 'Savings account not found'}, 404
 
+# Update savings account or delete
+@saving_bp.route('/<int:id>/', methods=['DELETE'])
+@jwt_required()
+def delete_savings(id):
+    stmt = db.select(Saving).filter_by(id=id)
+    saving = db.session.scalar(stmt)
+
+    user_id = get_jwt_identity()
+
+    # Check if belongs to logged in user
+    if int(user_id) == int(saving.user_id):
+        if saving:
+            # Delete item from database
+            db.session.delete(saving)
+            db.session.commit()
+            return {'message': 'Account successfully deleted'}
+    else:
+        return {'error': 'Savings account not found'}, 404

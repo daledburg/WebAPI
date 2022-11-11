@@ -8,6 +8,7 @@ from models.debt import Debt
 from models.saving import Saving
 
 
+
 db_commands = Blueprint('db', __name__)
 
 @db_commands.cli.command('create')

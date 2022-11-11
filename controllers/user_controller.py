@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, request
 from datetime import date, timedelta
 from init import db, bcrypt
 from sqlalchemy.exc import IntegrityError
@@ -16,18 +16,18 @@ def register_user():
             f_name = data['f_name'],
             l_name = data['l_name'],
             email = data['email'],
-            password = bcrypt.generate_password_hash(data['password']),
+            password = bcrypt.generate_password_hash(data['password']).decode('utf8'),
             date_created = date.today()
         )
         # Add and commit user to db
         db.session.add(user)
         db.session.commit()
-        return UserSchema(exclude=['password']).dump(user), 201
+        return UserSchema(exclude=['password', 'cash_flow_item', 'saving']).dump(user), 201
     except IntegrityError:
         return {'error': 'User already exists with that email'}, 409
 
 # Get logged in users information
-@user_bp.route('/userinfo/')
+@user_bp.route('/details/')
 @jwt_required()
 def get_user_info():
     user_id = get_jwt_identity()
@@ -50,35 +50,45 @@ def user_login():
         return {'error': 'Invalid email or password'}, 401
 
 # Update or delete user details and associated information
-@user_bp.route('/<int:id>/', methods=['PUT', 'PATCH', 'DELETE'])
+@user_bp.route('/<int:id>/', methods=['PUT', 'PATCH'])
 @jwt_required()
 def update_user(id):
-    data = UserSchema().load(request.json)
-    
     stmt = db.select(User).filter_by(id=id)
     user_details = db.session.scalar(stmt)
-    
+
     user = get_jwt_identity()
 
     # Check if belongs to logged in user
     if int(user) == int(user_details.id):
-        if request.method == ('PUT' or 'PATCH'):
-            if user_details:
-                # Update required values in database
-                user_details.f_name = data['f_name'] or user_details.f_name
-                user_details.l_name = data['l_name'] or user_details.l_name
-                user_details.email = data['email'] or user_details.email
-                user_details.password = bcrypt.generate_password_hash(data['password']) or user_details.password
-                return UserSchema(only=['f_name', 'l_name', 'email']).dump(user_details)
-            else:
-                return {'error': f'User not found with id {id}'}, 404
-        elif request.method == 'DELETE':
-            if user_details:
-                # Delete item from database
-                db.session.delete(user_details)
-                db.session.commit()
-                return {'message': f'User {user_details.email} deleted successfully'}
-            else:
-                return {'error': f'User {user_details.email} not found.'}, 404
+        if user_details:
+            # Update required values in database
+            user_details.f_name = request.json.get('f_name') or user_details.f_name
+            user_details.l_name = request.json.get('l_name') or user_details.l_name
+            user_details.email = request.json.get('email') or user_details.email
+            db.session.commit()
+            return UserSchema(only=['f_name', 'l_name', 'email']).dump(user_details)
+        else:
+            return {'error': 'User not found'}, 404
     else:
         return {'error': 'User not found'}, 404
+
+@user_bp.route('/<int:id>/', methods=['DELETE'])
+@jwt_required()
+def delete_user(id):
+    stmt = db.select(User).filter_by(id=id)
+    user_details = db.session.scalar(stmt)
+
+    user = get_jwt_identity()
+
+    # Check if belongs to logged in user
+    if int(user) == int(user_details.id):
+        if user_details:
+            # Delete item from database
+            db.session.delete(user_details)
+            db.session.commit()
+            return {'message': 'User deleted successfully'}
+        else:
+            return {'error': 'User not found.'}, 404
+    else:
+        return {'error': 'User not found'}, 404
+

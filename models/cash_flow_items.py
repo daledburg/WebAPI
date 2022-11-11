@@ -17,7 +17,7 @@ class CashFlowItem(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
 
-    debt = db.relationship('Debt', back_populates='cash_flow_item')
+    debt = db.relationship('Debt', back_populates='cash_flow_item', cascade='all, delete')
     user = db.relationship('User', back_populates='cash_flow_item')
     category = db.relationship('Category', back_populates='cash_flow_items')
 
@@ -27,10 +27,8 @@ class CashFlowItemSchema(ma.Schema):
     user = fields.Nested('UserSchema', only=['f_name', 'id'])
     debt = fields.List(fields.Nested('DebtSchema', only=['outstanding_amount']))
     # Validate entrie for cash flow items through schema
-    description = fields.String(required=True, validate=Length(min=1))
-    amount = fields.Float(required=True, validate=And(
-        Range(min=0.0, error='Amount must be greater than 0'),
-        Regexp('^[0-9]+', error='Only numbers are allowed')))
+    description = fields.String(validate=Length(min=1))
+    amount = fields.Float(validate=Range(min=0.0, error='Amount must be greater than 0'))
     frequency = fields.String(load_default=VALID_FREQUENCIES[0], validate=OneOf(VALID_FREQUENCIES))
     
     class Meta:

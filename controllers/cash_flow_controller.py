@@ -4,7 +4,12 @@ from init import db
 from models.cash_flow_items import CashFlowItem, CashFlowItemSchema
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
+
 cash_flow_bp = Blueprint('cash_flow_items', __name__, url_prefix='/cashflow')
+
+# @cash_flow_bp.route('/documentation')
+# def documentation():
+#     return auto.html()
 
 # Retrieve entered Incomes for User
 @cash_flow_bp.route('/income/')
@@ -50,18 +55,19 @@ def get_one_cash_flow_item(id):
         return {'error': 'Item does not exist for user'}
 
 # Create new entry in database for new item
-@cash_flow_bp.route('/<int:id>', methods=['POST'])
+@cash_flow_bp.route('/<int:category_id>/', methods=['POST'])
 @jwt_required()
-def create_item(id):
+def create_item(category_id):
     data = CashFlowItemSchema().load(request.json)
+
     # Create new instance of item
     cash_flow_item = CashFlowItem(
         description = data['description'],
-        amount = data['amount'],
+        amount = float(data['amount']),
         date_created = date.today(),
         frequency = data['frequency'],
         user_id = get_jwt_identity(),
-        category_id = id
+        category_id = category_id
     )
 
     # Add and commit to database
@@ -71,34 +77,45 @@ def create_item(id):
     return CashFlowItemSchema().dump(cash_flow_item), 201
 
 # Update current item in database if belogns to logged in user
-@cash_flow_bp.route('/<int:id>/', methods=['PUT', 'PATCH', 'DELETE'])
+@cash_flow_bp.route('/<int:id>/', methods=['PUT', 'PATCH'])
 @jwt_required()
 def update_item(id):
-    data = CashFlowItemSchema().load(request.json)
-
     stmt = db.select(CashFlowItem).filter_by(id=id)
     cash_flow_item = db.session.scalar(stmt)
-    
+
+    # return cash_flow_item
     user = get_jwt_identity()
     # Check if belongs to logged in user
     if int(user) == int(cash_flow_item.user_id):
-        if request.method == ('PUT' or 'PATCH'):
-            if cash_flow_item:
-                # Update required values in database
-                cash_flow_item.description = data['description'] or cash_flow_item.description
-                cash_flow_item.amount = data['amount'] or cash_flow_item.amount
-                cash_flow_item.frequency = data['frequency'] or cash_flow_item.frequency
-                return CashFlowItemSchema(only=['description', 'amount', 'frequency']).dump(cash_flow_item)
-            else:
-                return {'error': f'Item not found with id {id}'}, 404
-        elif request.method == 'DELETE':
-            if cash_flow_item:
-                # Delete item from database
-                db.session.delete(cash_flow_item)
-                db.session.commit()
-                return {'message': f"Item '{cash_flow_item.description}' deleted successfully"}
-            else:
-                return {'error': f'Item not found with id {id}'}, 404
+        if cash_flow_item:
+            # Update required values in database
+            cash_flow_item.description = request.json.get('description') or cash_flow_item.description
+            cash_flow_item.amount = request.json.get('amount') or cash_flow_item.amount
+            cash_flow_item.frequency = request.json.get('frequency') or cash_flow_item.frequency
+            db.session.commit()
+            return CashFlowItemSchema(only=['description', 'amount', 'frequency']).dump(cash_flow_item)
+        else:
+            return {'error': f'Item not found with id {id}'}, 404
+    else:
+        return {'error': 'Card not yours!'}, 404
+
+@cash_flow_bp.route('/<int:id>/', methods=['DELETE'])
+@jwt_required()
+def delete_item(id):
+    stmt = db.select(CashFlowItem).filter_by(id=id)
+    cash_flow_item = db.session.scalar(stmt)
+
+    user = get_jwt_identity()
+
+    # Check if belongs to logged in user
+    if int(user) == int(cash_flow_item.user_id):
+        if cash_flow_item:
+            # Delete item from database
+            db.session.delete(cash_flow_item)
+            db.session.commit()
+            return {'message': f"Item '{cash_flow_item.description}' deleted successfully"}
+        else:
+            return {'error': f'Item not found with id {id}'}, 404
     else:
         return {'error': 'Card not yours!'}, 404
 
@@ -134,3 +151,5 @@ def get_current_budget():
     budget_amount = sum(income_list) - sum(expense_list)
 
     return {"budget_remaining": f'Your remaining budget is ${budget_amount}'}
+
+

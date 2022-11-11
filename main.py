@@ -31,13 +31,25 @@ def create_app():
     def value_error(err):
         return {'error': f'The field {err}'}, 400
 
+    @app.errorhandler(TypeError)
+    def type_error(err):
+        return {'error': f'The field {err}'}, 400
+
     @app.errorhandler(400)
     def bad_request(err):
         return {'error': str(err)}, 400
 
     @app.errorhandler(ValidationError)
     def validation_error(err):
-        return {'error': err.messages}, 400
+        return {'error': str(err)}, 400
+
+    @app.errorhandler(AttributeError)
+    def attribute_error(err):
+        return {'error': "That Item doesn't exist!"}, 400
+
+    @app.errorhandler(NameError)
+    def name_error(err):
+        return {'error': str(err)}, 400
 
     app.config ['JSON_SORT_KEYS'] = False
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
@@ -47,7 +59,6 @@ def create_app():
     ma.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
-
 
     app.register_blueprint(user_bp)
     app.register_blueprint(db_commands)
