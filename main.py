@@ -67,6 +67,3 @@ def create_app():
     app.register_blueprint(debt_bp)
 
     return app
-
-
-

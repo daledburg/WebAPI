@@ -10,4 +10,3 @@ ma = Marshmallow()
 bcrypt = Bcrypt()
 
 jwt = JWTManager()
-

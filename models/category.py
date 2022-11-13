@@ -11,7 +11,7 @@ class Category(db.Model):
 
     cash_flow_items = db.relationship('CashFlowItem', back_populates='category', cascade='all, delete')
 
-# Category schema 
+# Category schema
 class CategorySchema(ma.Schema):
     cash_flow_items = fields.List(fields.Nested('CashFlowItemSchema', only=['description', 'amount', 'frequency', 'user_id', 'debt']))
 

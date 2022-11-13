@@ -39,8 +39,6 @@ def create_savings():
 @saving_bp.route('/<int:id>/', methods=['PUT', 'PATCH'])
 @jwt_required()
 def update_savings(id):
-    data = SavingSchema().load(request.json)
-    
     stmt = db.select(Saving).filter_by(id=id)
     saving = db.session.scalar(stmt)
 

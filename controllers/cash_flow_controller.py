@@ -4,12 +4,7 @@ from init import db
 from models.cash_flow_items import CashFlowItem, CashFlowItemSchema
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-
 cash_flow_bp = Blueprint('cash_flow_items', __name__, url_prefix='/cashflow')
-
-# @cash_flow_bp.route('/documentation')
-# def documentation():
-#     return auto.html()
 
 # Retrieve entered Incomes for User
 @cash_flow_bp.route('/income/')
@@ -151,5 +146,3 @@ def get_current_budget():
     budget_amount = sum(income_list) - sum(expense_list)
 
     return {"budget_remaining": f'Your remaining budget is ${budget_amount}'}
-
-

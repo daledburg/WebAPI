@@ -30,7 +30,7 @@ class CashFlowItemSchema(ma.Schema):
     description = fields.String(validate=Length(min=1))
     amount = fields.Float(validate=Range(min=0.0, error='Amount must be greater than 0'))
     frequency = fields.String(load_default=VALID_FREQUENCIES[0], validate=OneOf(VALID_FREQUENCIES))
-    
+
     class Meta:
         fields = ('id', 'description', 'amount', 'date_created', 'frequency', 'user_id', 'category_id', 'debt')
         ordered = True

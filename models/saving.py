@@ -20,7 +20,7 @@ class SavingSchema(ma.Schema):
     user = fields.Nested('UserSchema', only=['f_name', 'id'])
     # Validate entries for current amount
     current_amount = fields.Float(required=True, validate=Range(min=0.0, error='Amount must be greater than 0'))
-        
+
     class Meta:
         fields = ('id', 'bank_name', 'current_amount', 'date_updated', 'user_id')
         ordered = True

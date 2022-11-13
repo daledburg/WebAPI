@@ -31,13 +31,13 @@ def register_user():
 @jwt_required()
 def get_user_info():
     user_id = get_jwt_identity()
-    
+
     stmt = db.select(User).filter_by(id = int(user_id))
     user_info = db.session.scalar(stmt)
-    
+
     return UserSchema(exclude=['password']).dump(user_info)
 
-# Login 
+# Login
 @user_bp.route('/login/', methods=['POST'])
 def user_login():
     stmt = db.select(User).filter_by(email=request.json['email'])
@@ -49,7 +49,7 @@ def user_login():
     else:
         return {'error': 'Invalid email or password'}, 401
 
-# Update or delete user details and associated information
+# Update user details and associated information
 @user_bp.route('/<int:id>/', methods=['PUT', 'PATCH'])
 @jwt_required()
 def update_user(id):
@@ -72,6 +72,7 @@ def update_user(id):
     else:
         return {'error': 'User not found'}, 404
 
+# Delete user details and associated information
 @user_bp.route('/<int:id>/', methods=['DELETE'])
 @jwt_required()
 def delete_user(id):
